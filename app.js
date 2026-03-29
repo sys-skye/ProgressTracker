@@ -253,16 +253,19 @@ function loadProgress() {
     return {};
 }
 
-// Save progress to localStorage and (optionally) push to cloud
+// Save progress to localStorage (with timestamp) and push to cloud if logged in
 async function saveProgress(progress) {
     try {
+        const now = Date.now();
         localStorage.setItem('learningProgress', JSON.stringify(progress));
+        localStorage.setItem('learningProgressAt', String(now));
         updateProgressDisplay();
-        updateSyncStatus('Gespeichert ✓');
 
-        // Push to cloud if enabled and this change is local
-        if (typeof cloudEnabled !== 'undefined' && cloudEnabled && !applyingRemote) {
-            writeStateDebounced(progress);
+        if (cloudEnabled && stateRef && !applyingRemote) {
+            updateSyncStatus('Speichere...');
+            writeStateDebounced(progress, now);
+        } else {
+            updateSyncStatus('Gespeichert ✓');
         }
     } catch (e) {
         console.warn('Could not save progress to localStorage:', e);
@@ -283,7 +286,8 @@ function updateSyncStatus(message) {
 
 // --- Cloud sync helpers (optional) ---
 let cloudEnabled = false;
-let clientId = null;
+let clientId = null;        // Firebase user UID — used for DB path
+let sessionId = Math.random().toString(36).slice(2); // random per-tab ID — used for echo prevention
 let applyingRemote = false;
 let stateRef = null;
 let lastRemoteAt = 0;
@@ -293,26 +297,29 @@ function debounce(fn, wait = 200) {
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
 }
 
-const writeStateDebounced = debounce(async (state) => {
+const writeStateDebounced = debounce(async (state, timestamp) => {
     try {
         if (!cloudEnabled || !stateRef || applyingRemote) return;
-        await stateRef.set({ data: state, origin: clientId, updatedAt: Date.now() });
+        await stateRef.set({ data: state, origin: sessionId, updatedAt: timestamp || Date.now() });
+        updateSyncStatus('Cloud gespeichert ✓');
     } catch (e) {
         console.warn('Cloud write failed:', e);
+        updateSyncStatus('Cloud-Fehler ⚠️');
     }
-}, 250);
+}, 400);
 
-function applyRemoteState(payload) {
+function applyRemoteState(payload, force = false) {
     if (!payload || !payload.data) return;
-    // ignore updates originated from this client
-    if (payload.origin && clientId && payload.origin === clientId) return;
-    // ignore older updates
+    // Only skip echo from this exact browser tab (sessionId), not from the same user account
+    if (!force && payload.origin && payload.origin === sessionId) return;
+    // Ignore older updates than what we already applied
     if (payload.updatedAt && payload.updatedAt <= lastRemoteAt) return;
 
     applyingRemote = true;
     lastRemoteAt = payload.updatedAt || Date.now();
     try {
         localStorage.setItem('learningProgress', JSON.stringify(payload.data));
+        localStorage.setItem('learningProgressAt', String(lastRemoteAt));
         updateSyncStatus('Sync: empfangen ✓');
         renderDays(document.querySelector('.phase-btn.active').dataset.phase);
         updateProgressDisplay();
@@ -323,54 +330,61 @@ function applyRemoteState(payload) {
 }
 
 function setupCloudSync() {
-    // Cloud sync is enabled only if the page provided window.FIREBASE_CONFIG
     const cfg = window.FIREBASE_CONFIG;
     if (!cfg || !cfg.databaseURL) {
-        console.info('Firebase config not found - cloud sync disabled. Paste config into index.html to enable.');
-        updateSyncStatus('Cloud sync deaktiviert (Config fehlt)');
+        console.info('Firebase config not found - cloud sync disabled.');
         cloudEnabled = false;
         return;
     }
 
     try {
-        firebase.initializeApp(cfg);
+        if (!firebase.apps.length) { firebase.initializeApp(cfg); }
         const db = firebase.database();
         cloudEnabled = true;
 
-        // Handle auth state. We use Email/Password so each user gets a separate path.
         firebase.auth().onAuthStateChanged(async (user) => {
             if (user) {
                 clientId = user.uid;
 
-                // detach previous listener if any
+                // Detach previous listener if any
                 if (stateRef) stateRef.off();
-
                 stateRef = db.ref(`users/${clientId}/state`);
 
-                // initial sync: if DB empty but localStorage has data, upload local
+                // --- Initial sync: pick the newer of local vs cloud ---
                 const snap = await stateRef.once('value');
                 const payload = snap.val();
                 const local = loadProgress();
+                const localAt = parseInt(localStorage.getItem('learningProgressAt') || '0');
+                const cloudAt = payload && payload.updatedAt ? payload.updatedAt : 0;
 
                 if (!payload || !payload.data) {
+                    // Cloud is empty → upload local progress if any
                     if (local && Object.keys(local).length) {
-                        // push local to cloud
-                        try { await stateRef.set({ data: local, origin: clientId, updatedAt: Date.now() }); updateSyncStatus('Lokaler Fortschritt hochgeladen'); } catch (e) { console.warn('Upload failed:', e); }
+                        try {
+                            await stateRef.set({ data: local, origin: sessionId, updatedAt: localAt || Date.now() });
+                            updateSyncStatus('Lokaler Fortschritt hochgeladen ✓');
+                        } catch (e) { console.warn('Upload failed:', e); }
                     }
+                } else if (localAt > cloudAt) {
+                    // Local is newer (e.g. offline edits) → push to cloud
+                    try {
+                        await stateRef.set({ data: local, origin: sessionId, updatedAt: localAt });
+                        updateSyncStatus('Lokaler Fortschritt hochgeladen ✓');
+                    } catch (e) { console.warn('Upload failed:', e); }
                 } else {
-                    applyRemoteState(payload);
+                    // Cloud is newer → apply it (force=true bypasses the session-echo check)
+                    applyRemoteState(payload, true);
                 }
 
-                // listen for remote updates for this user
+                // Listen for real-time updates from other devices/tabs
                 stateRef.on('value', snap => {
                     const p = snap.val();
                     if (!p) return;
-                    applyRemoteState(p);
+                    applyRemoteState(p); // echo from this tab filtered by sessionId
                 });
 
-                // update UI
                 showAuthUI(user.email || 'Angemeldet');
-                updateSyncStatus('Cloud sync aktiviert (user)');
+                updateSyncStatus('Cloud sync aktiv ✓');
             } else {
                 clientId = null;
                 if (stateRef) { stateRef.off(); stateRef = null; }
@@ -379,7 +393,7 @@ function setupCloudSync() {
             }
         });
 
-        updateSyncStatus('Cloud ready — anmelden, um zu syncen');
+        updateSyncStatus('Cloud bereit — anmelden, um zu syncen');
     } catch (e) {
         console.warn('Could not initialize Firebase:', e);
         cloudEnabled = false;
@@ -629,6 +643,16 @@ async function toggleTask(dayNumber, taskIndex, checkbox) {
 async function resetProgress() {
     if (confirm('Möchtest du wirklich deinen gesamten Fortschritt zurücksetzen? Dies kann nicht rückgängig gemacht werden.')) {
         localStorage.removeItem('learningProgress');
+        localStorage.removeItem('learningProgressAt');
+        // Also wipe the cloud so it doesn't restore on next login
+        if (cloudEnabled && stateRef) {
+            try {
+                await stateRef.remove();
+                updateSyncStatus('Fortschritt zurückgesetzt (lokal & Cloud) ✓');
+            } catch (e) {
+                console.warn('Could not reset cloud progress:', e);
+            }
+        }
         await renderDays(document.querySelector('.phase-btn.active').dataset.phase);
         updateProgressDisplay();
     }
