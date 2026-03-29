@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15-Tage Intensiv-Plan - Lernfortschritts-Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 15-Tage Intensiv-Plan</h1>
+            <p class="subtitle">Wirtschaftspolitik & Soziale Ungleichheit</p>
+            <div class="progress-overview">
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="overallProgress"></div>
+                </div>
+                <span id="progressText">0% abgeschlossen</span>
+            </div>
+        </header>
+
+        <nav class="phase-nav">
+            <button class="phase-btn active" data-phase="all">Alle</button>
+            <button class="phase-btn" data-phase="phase1">Phase 1</button>
+            <button class="phase-btn" data-phase="phase2">Phase 2</button>
+        </nav>
+
+        <main id="daysContainer">
+            <!-- Days will be dynamically loaded here -->
+        </main>
+
+        <footer>
+            <p>Dein Fortschritt wird automatisch gespeichert ✓</p>
+            <div id="syncStatus" style="font-size: 0.8em; opacity: 0.7; margin-top: 5px;">🔄 Sync aktiv</div>
+            <button id="resetProgress" class="reset-btn">Fortschritt zurücksetzen</button>
+        </footer>
+    </div>
+
+    <script>
+        // GitHub-based sync configuration
+        // Replace these with your actual values
+        window.githubConfig = {
+            username: 'sys-skye',
+            repo: 'ProgressTracker',
+            token: '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',
+            dataFile: 'progress-data.json'
+        };
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>
