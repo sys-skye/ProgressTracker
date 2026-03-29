@@ -253,179 +253,16 @@ function loadProgress() {
     return {};
 }
 
-// Save progress to localStorage and sync to Gist
+// Save progress to localStorage only
 async function saveProgress(progress) {
     try {
         localStorage.setItem('learningProgress', JSON.stringify(progress));
         updateProgressDisplay();
-
-        // Sync to Gist in background with status feedback
-        if (gistConfig.gistId) {
-            updateSyncStatus('Synchronisiere...');
-            await syncToGist(progress);
-        }
+        updateSyncStatus('Gespeichert ✓');
     } catch (e) {
         console.warn('Could not save progress to localStorage:', e);
         alert('Fortschritt konnte nicht gespeichert werden. Überprüfen Sie Ihre Browsereinstellungen.');
     }
-}
-
-// GitHub Gist sync functionality
-const GIST_CONFIG_KEY = 'gistConfig';
-let gistConfig = loadGistConfig();
-
-function loadGistConfig() {
-    try {
-        const saved = localStorage.getItem(GIST_CONFIG_KEY);
-        return saved ? JSON.parse(saved) : { gistId: '', token: '' };
-    } catch (e) {
-        console.warn('Could not load Gist config:', e);
-        return { gistId: '', token: '' };
-    }
-}
-
-function saveGistConfig(config) {
-    try {
-        localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(config));
-        gistConfig = config;
-    } catch (e) {
-        console.warn('Could not save Gist config:', e);
-    }
-}
-
-async function syncToGist(progress) {
-    if (!gistConfig.gistId) return;
-
-    try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (gistConfig.token) headers['Authorization'] = `token ${gistConfig.token}`;
-
-        const response = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({
-                files: {
-                    'progress.json': {
-                        content: JSON.stringify(progress, null, 2)
-                    }
-                }
-            })
-        });
-
-        if (!response.ok) {
-            let errorMessage = 'Sync fehlgeschlagen';
-            if (response.status === 403) {
-                errorMessage = '403: Token fehlt oder ungültig. Prüfe Personal Access Token!';
-            } else if (response.status === 404) {
-                errorMessage = '404: Gist nicht gefunden. Prüfe Gist-ID!';
-            } else if (response.status === 401) {
-                errorMessage = '401: Nicht autorisiert. Token erforderlich!';
-            } else {
-                errorMessage = `${response.status}: ${response.statusText}`;
-            }
-            throw new Error(`${errorMessage} (${response.status})`);
-        }
-
-        console.log('Progress synced to Gist successfully');
-        updateSyncStatus('Synchronisiert ✓');
-    } catch (e) {
-        console.warn('Could not sync to Gist:', e);
-        updateSyncStatus(`Sync fehlgeschlagen: ${e.message}`);
-    }
-}
-
-// Test Gist connection
-async function testGistConnection() {
-    if (!gistConfig.gistId) {
-        updateSyncStatus('Gist-ID fehlt');
-        return false;
-    }
-
-    try {
-        updateSyncStatus('Teste Verbindung...');
-
-        // First try to read the gist
-        const readHeaders = {};
-        if (gistConfig.token) readHeaders['Authorization'] = `token ${gistConfig.token}`;
-        const readResponse = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, { headers: readHeaders });
-        if (!readResponse.ok) {
-            if (readResponse.status === 404) {
-                updateSyncStatus('Gist nicht gefunden. Erstelle zuerst einen Gist!');
-                return false;
-            }
-            throw new Error(`Read failed: ${readResponse.status}`);
-        }
-
-        // Then try to write (PATCH) to test write permissions
-        const testData = { test: true, timestamp: Date.now() };
-        const writeHeaders = { 'Content-Type': 'application/json' };
-        if (gistConfig.token) writeHeaders['Authorization'] = `token ${gistConfig.token}`;
-
-        const writeResponse = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, {
-            method: 'PATCH',
-            headers: writeHeaders,
-            body: JSON.stringify({
-                files: {
-                    'test.json': {
-                        content: JSON.stringify(testData)
-                    }
-                }
-            })
-        });
-
-        if (!writeResponse.ok) {
-            if (writeResponse.status === 403) {
-                updateSyncStatus('Schreibberechtigung fehlt. Token mit gist-Berechtigung erforderlich!');
-                return false;
-            } else if (writeResponse.status === 401) {
-                updateSyncStatus('Token ungültig oder abgelaufen!');
-                return false;
-            }
-            throw new Error(`Write test failed: ${writeResponse.status}`);
-        }
-
-        // Clean up test file
-        const cleanupHeaders = { 'Content-Type': 'application/json' };
-        if (gistConfig.token) cleanupHeaders['Authorization'] = `token ${gistConfig.token}`;
-        await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, {
-            method: 'PATCH',
-            headers: cleanupHeaders,
-            body: JSON.stringify({
-                files: {
-                    'test.json': null // Delete the test file
-                }
-            })
-        });
-
-        updateSyncStatus('Verbindung erfolgreich ✓');
-        return true;
-    } catch (e) {
-        console.warn('Connection test failed:', e);
-        updateSyncStatus(`Verbindung fehlgeschlagen: ${e.message}`);
-        return false;
-    }
-}
-
-async function loadFromGist() {
-    if (!gistConfig.gistId) return null;
-
-    try {
-        const headers = {};
-        if (gistConfig.token) headers['Authorization'] = `token ${gistConfig.token}`;
-        const response = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, { headers });
-        if (!response.ok) {
-            throw new Error(`GitHub API error: ${response.status}`);
-        }
-
-        const gist = await response.json();
-        const progressData = gist.files['progress.json']?.content;
-        if (progressData) {
-            return JSON.parse(progressData);
-        }
-    } catch (e) {
-        console.warn('Could not load from Gist:', e);
-    }
-    return null;
 }
 
 function updateSyncStatus(message) {
@@ -436,23 +273,6 @@ function updateSyncStatus(message) {
         setTimeout(() => {
             statusElement.style.display = 'none';
         }, 3000);
-    }
-}
-
-function updateSyncStatusIndicator() {
-    const indicator = document.getElementById('syncStatusIndicator');
-    const statusText = document.getElementById('syncStatusText');
-
-    if (!indicator || !statusText) return;
-
-    if (gistConfig.gistId) {
-        indicator.style.display = 'block';
-        indicator.classList.add('configured');
-        statusText.textContent = `Status: Konfiguriert (${gistConfig.token ? 'Privat' : 'Öffentlich'})`;
-    } else {
-        indicator.style.display = 'block';
-        indicator.classList.remove('configured');
-        statusText.textContent = 'Status: Nicht konfiguriert';
     }
 }
 
@@ -470,38 +290,14 @@ function initializeProgress() {
     return progress;
 }
 
-// Get current progress (prioritize cloud data if configured)
+// Get current progress (localStorage only)
 async function getCurrentProgress() {
-    let progress = null;
-    let useGistData = false;
-
-    // If gist is configured, try to load from Gist first (always prefer cloud)
-    if (gistConfig.gistId) {
-        updateSyncStatus('Lade von Cloud...');
-        const gistProgress = await loadFromGist();
-        if (gistProgress && Object.keys(gistProgress).length > 0) {
-            progress = gistProgress;
-            useGistData = true;
-            // Save to localStorage as backup
-            localStorage.setItem('learningProgress', JSON.stringify(progress));
-            updateSyncStatus('Von Cloud geladen ✓');
-        } else {
-            updateSyncStatus('Cloud nicht verfügbar, verwende lokale Daten');
-        }
-    }
-
-    // If no gist data or gist not configured, load from localStorage
-    if (!progress) {
-        progress = loadProgress();
-    }
+    let progress = loadProgress();
 
     // If still no progress, initialize
-    if (Object.keys(progress).length === 0) {
+    if (!progress || Object.keys(progress).length === 0) {
         progress = initializeProgress();
-        saveProgress(progress);
-    } else if (!useGistData && gistConfig.gistId) {
-        // If we used local data and gist is configured, sync local to gist
-        syncToGist(progress);
+        await saveProgress(progress);
     }
 
     return progress;
@@ -711,99 +507,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Reset button
     const resetBtn = document.getElementById('resetProgress');
     if (resetBtn) resetBtn.addEventListener('click', resetProgress);
-
-    // Sync settings
-    const saveBtn = document.getElementById('saveSyncSettings');
-    if (saveBtn) saveBtn.addEventListener('click', () => {
-        const gistIdEl = document.getElementById('gistId');
-        const tokenEl = document.getElementById('gistToken');
-        const gistId = gistIdEl ? gistIdEl.value.trim() : '';
-        const token = tokenEl ? tokenEl.value.trim() : '';
-
-        if (gistId) {
-            saveGistConfig({ gistId, token });
-            updateSyncStatusIndicator();
-            updateSyncStatus('Einstellungen gespeichert ✓');
-
-            // Try to sync current progress
-            getCurrentProgress().then(progress => {
-                syncToGist(progress);
-            });
-        } else {
-            updateSyncStatus('Bitte Gist ID eingeben');
-        }
-    });
-
-    // Test connection
-    const testBtn = document.getElementById('testConnection');
-    if (testBtn) testBtn.addEventListener('click', async () => {
-        const gistIdEl = document.getElementById('gistId');
-        const tokenEl = document.getElementById('gistToken');
-        const gistId = gistIdEl ? gistIdEl.value.trim() : '';
-        const token = tokenEl ? tokenEl.value.trim() : '';
-
-        if (gistId) {
-            // Temporarily update config for testing
-            const tempConfig = { gistId, token };
-            const originalConfig = gistConfig;
-            gistConfig = tempConfig;
-
-            const success = await testGistConnection();
-
-            // Restore original config
-            gistConfig = originalConfig;
-
-            if (success) {
-                // Save the working config
-                saveGistConfig(tempConfig);
-                updateSyncStatusIndicator();
-            }
-        } else {
-            updateSyncStatus('Bitte Gist ID eingeben');
-        }
-    });
-
-    // Manual sync buttons
-    const fromBtn = document.getElementById('syncFromCloud');
-    if (fromBtn) fromBtn.addEventListener('click', async () => {
-        if (!gistConfig.gistId) {
-            updateSyncStatus('Gist nicht konfiguriert');
-            return;
-        }
-
-        updateSyncStatus('Lade von Cloud...');
-        const gistProgress = await loadFromGist();
-        if (gistProgress && Object.keys(gistProgress).length > 0) {
-            // Save to localStorage
-            localStorage.setItem('learningProgress', JSON.stringify(gistProgress));
-            updateSyncStatus('Von Cloud geladen ✓');
-
-            // Re-render the UI with new data
-            const activePhaseBtn = document.querySelector('.phase-btn.active');
-            const phase = activePhaseBtn ? activePhaseBtn.dataset.phase : 'all';
-            await renderDays(phase);
-            updateProgressDisplay();
-        } else {
-            updateSyncStatus('Keine Daten in Cloud gefunden');
-        }
-    });
-
-    const toBtn = document.getElementById('syncToCloud');
-    if (toBtn) toBtn.addEventListener('click', async () => {
-        if (!gistConfig.gistId) {
-            updateSyncStatus('Gist nicht konfiguriert');
-            return;
-        }
-
-        updateSyncStatus('Speichere zu Cloud...');
-        const progress = await getCurrentProgress();
-        await syncToGist(progress);
-    });
-
-    // Load saved sync settings and update indicator
-    document.getElementById('gistId').value = gistConfig.gistId;
-    document.getElementById('gistToken').value = gistConfig.token;
-    updateSyncStatusIndicator();
 });
 
 window.addEventListener('offline', () => {
