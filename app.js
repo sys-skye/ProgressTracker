@@ -335,25 +335,99 @@ function setupCloudSync() {
     try {
         firebase.initializeApp(cfg);
         const db = firebase.database();
-        stateRef = db.ref('shared/state');
         cloudEnabled = true;
 
-        firebase.auth().signInAnonymously().catch(err => console.warn('Auth failed:', err));
-        firebase.auth().onAuthStateChanged(user => {
-            clientId = user ? user.uid : null;
+        // Handle auth state. We use Email/Password so each user gets a separate path.
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (user) {
+                clientId = user.uid;
+
+                // detach previous listener if any
+                if (stateRef) stateRef.off();
+
+                stateRef = db.ref(`users/${clientId}/state`);
+
+                // initial sync: if DB empty but localStorage has data, upload local
+                const snap = await stateRef.once('value');
+                const payload = snap.val();
+                const local = loadProgress();
+
+                if (!payload || !payload.data) {
+                    if (local && Object.keys(local).length) {
+                        // push local to cloud
+                        try { await stateRef.set({ data: local, origin: clientId, updatedAt: Date.now() }); updateSyncStatus('Lokaler Fortschritt hochgeladen'); } catch (e) { console.warn('Upload failed:', e); }
+                    }
+                } else {
+                    applyRemoteState(payload);
+                }
+
+                // listen for remote updates for this user
+                stateRef.on('value', snap => {
+                    const p = snap.val();
+                    if (!p) return;
+                    applyRemoteState(p);
+                });
+
+                // update UI
+                showAuthUI(user.email || 'Angemeldet');
+                updateSyncStatus('Cloud sync aktiviert (user)');
+            } else {
+                clientId = null;
+                if (stateRef) { stateRef.off(); stateRef = null; }
+                showAuthUI(null);
+                updateSyncStatus('Nicht angemeldet — Cloud sync pausiert');
+            }
         });
 
-        stateRef.on('value', snap => {
-            const payload = snap.val();
-            if (!payload) return;
-            applyRemoteState(payload);
-        });
-
-        updateSyncStatus('Cloud sync aktiviert');
+        updateSyncStatus('Cloud ready — anmelden, um zu syncen');
     } catch (e) {
         console.warn('Could not initialize Firebase:', e);
         cloudEnabled = false;
         updateSyncStatus('Cloud sync Fehler');
+    }
+}
+
+// Auth UI helpers
+function showAuthUI(userEmail) {
+    const form = document.getElementById('authForm');
+    const userBox = document.getElementById('authUser');
+    const emailSpan = document.getElementById('userEmail');
+    if (userEmail) {
+        if (form) form.style.display = 'none';
+        if (emailSpan) emailSpan.textContent = userEmail;
+        if (userBox) userBox.style.display = 'flex';
+    } else {
+        if (form) form.style.display = 'block';
+        if (userBox) userBox.style.display = 'none';
+    }
+}
+
+async function signUp(email, password) {
+    try {
+        await firebase.auth().createUserWithEmailAndPassword(email, password);
+        updateSyncStatus('Registrierung erfolgreich');
+    } catch (e) {
+        console.warn('Sign up failed:', e);
+        alert('Registrierung fehlgeschlagen: ' + (e.message || e));
+    }
+}
+
+async function signIn(email, password) {
+    try {
+        await firebase.auth().signInWithEmailAndPassword(email, password);
+        updateSyncStatus('Angemeldet');
+    } catch (e) {
+        console.warn('Sign in failed:', e);
+        alert('Anmeldung fehlgeschlagen: ' + (e.message || e));
+    }
+}
+
+async function signOutUser() {
+    try {
+        await firebase.auth().signOut();
+        updateSyncStatus('Abgemeldet');
+    } catch (e) {
+        console.warn('Sign out failed:', e);
     }
 }
 
@@ -595,6 +669,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Reset button
     const resetBtn = document.getElementById('resetProgress');
     if (resetBtn) resetBtn.addEventListener('click', resetProgress);
+
+    // Auth buttons
+    const signInBtn = document.getElementById('signInBtn');
+    const signUpBtn = document.getElementById('signUpBtn');
+    const signOutBtn = document.getElementById('signOutBtn');
+
+    if (signInBtn) signInBtn.addEventListener('click', () => {
+        const email = document.getElementById('authEmail').value;
+        const pw = document.getElementById('authPassword').value;
+        if (!email || !pw) return alert('Bitte Email und Passwort eingeben.');
+        signIn(email, pw);
+    });
+
+    if (signUpBtn) signUpBtn.addEventListener('click', () => {
+        const email = document.getElementById('authEmail').value;
+        const pw = document.getElementById('authPassword').value;
+        if (!email || !pw) return alert('Bitte Email und Passwort eingeben.');
+        signUp(email, pw);
+    });
+
+    if (signOutBtn) signOutBtn.addEventListener('click', () => {
+        signOutUser();
+    });
 });
 
 window.addEventListener('offline', () => {
