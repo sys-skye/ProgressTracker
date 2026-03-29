@@ -313,14 +313,95 @@ async function syncToGist(progress) {
         });
 
         if (!response.ok) {
-            throw new Error(`GitHub API error: ${response.status}`);
+            let errorMessage = 'Sync fehlgeschlagen';
+            if (response.status === 403) {
+                errorMessage = '403: Token fehlt oder ungültig. Prüfe Personal Access Token!';
+            } else if (response.status === 404) {
+                errorMessage = '404: Gist nicht gefunden. Prüfe Gist-ID!';
+            } else if (response.status === 401) {
+                errorMessage = '401: Nicht autorisiert. Token erforderlich!';
+            } else {
+                errorMessage = `${response.status}: ${response.statusText}`;
+            }
+            throw new Error(`${errorMessage} (${response.status})`);
         }
 
         console.log('Progress synced to Gist successfully');
         updateSyncStatus('Synchronisiert ✓');
     } catch (e) {
         console.warn('Could not sync to Gist:', e);
-        updateSyncStatus('Sync fehlgeschlagen ✗');
+        updateSyncStatus(`Sync fehlgeschlagen: ${e.message}`);
+    }
+}
+
+// Test Gist connection
+async function testGistConnection() {
+    if (!gistConfig.gistId) {
+        updateSyncStatus('Gist-ID fehlt');
+        return false;
+    }
+
+    try {
+        updateSyncStatus('Teste Verbindung...');
+
+        // First try to read the gist
+        const readResponse = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`);
+        if (!readResponse.ok) {
+            if (readResponse.status === 404) {
+                updateSyncStatus('Gist nicht gefunden. Erstelle zuerst einen Gist!');
+                return false;
+            }
+            throw new Error(`Read failed: ${readResponse.status}`);
+        }
+
+        // Then try to write (PATCH) to test write permissions
+        const testData = { test: true, timestamp: Date.now() };
+        const writeResponse = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': gistConfig.token ? `token ${gistConfig.token}` : undefined,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                files: {
+                    'test.json': {
+                        content: JSON.stringify(testData)
+                    }
+                }
+            })
+        });
+
+        if (!writeResponse.ok) {
+            if (writeResponse.status === 403) {
+                updateSyncStatus('Schreibberechtigung fehlt. Token mit gist-Berechtigung erforderlich!');
+                return false;
+            } else if (writeResponse.status === 401) {
+                updateSyncStatus('Token ungültig oder abgelaufen!');
+                return false;
+            }
+            throw new Error(`Write test failed: ${writeResponse.status}`);
+        }
+
+        // Clean up test file
+        await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': gistConfig.token ? `token ${gistConfig.token}` : undefined,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                files: {
+                    'test.json': null // Delete the test file
+                }
+            })
+        });
+
+        updateSyncStatus('Verbindung erfolgreich ✓');
+        return true;
+    } catch (e) {
+        console.warn('Connection test failed:', e);
+        updateSyncStatus(`Verbindung fehlgeschlagen: ${e.message}`);
+        return false;
     }
 }
 
@@ -641,6 +722,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             getCurrentProgress().then(progress => {
                 syncToGist(progress);
             });
+        } else {
+            updateSyncStatus('Bitte Gist ID eingeben');
+        }
+    });
+
+    // Test connection
+    document.getElementById('testConnection').addEventListener('click', async () => {
+        const gistId = document.getElementById('gistId').value.trim();
+        const token = document.getElementById('gistToken').value.trim();
+
+        if (gistId) {
+            // Temporarily update config for testing
+            const tempConfig = { gistId, token };
+            const originalConfig = gistConfig;
+            gistConfig = tempConfig;
+
+            const success = await testGistConnection();
+
+            // Restore original config
+            gistConfig = originalConfig;
+
+            if (success) {
+                // Save the working config
+                saveGistConfig(tempConfig);
+                updateSyncStatusIndicator();
+            }
         } else {
             updateSyncStatus('Bitte Gist ID eingeben');
         }

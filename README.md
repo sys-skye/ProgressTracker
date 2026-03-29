@@ -101,6 +101,24 @@ Synchronisiere deinen Fortschritt kostenlos über mehrere Geräte mit GitHub Gis
 - Token wird lokal im Browser gespeichert
 - Niemals den Token mit anderen teilen
 
+### Fehlerbehebung:
+
+**403 Forbidden Fehler:**
+- **Ursache**: Fehlender oder ungültiger Personal Access Token
+- **Lösung**: 
+  1. Token erstellen unter [GitHub Settings → Personal access tokens](https://github.com/settings/tokens)
+  2. `gist` Berechtigung auswählen (und `repo` bei privaten Repos)
+  3. Token kopieren und in der App einfügen
+  4. "Verbindung testen" verwenden um zu prüfen
+
+**404 Not Found Fehler:**
+- **Ursache**: Ungültige Gist-ID
+- **Lösung**: Gist-URL prüfen - die ID ist der lange String nach `/gist/`
+
+**Verbindungstest:**
+- "Verbindung testen" Button verwenden um Setup zu verifizieren
+- Testet sowohl Lese- als auch Schreibberechtigungen
+
 ## ☁️ Cloud Sync (Free)
 
 Sync your progress across devices for free using GitHub Gist:
@@ -140,10 +158,23 @@ Sync your progress across devices for free using GitHub Gist:
 - ✅ Privacy (private gists)
 - ✅ Offline-capable (syncs when connected)
 
-### Security:
-- Private gists are visible only to you
-- Token stored locally in browser
-- Never share your token with others
+### Troubleshooting:
+
+**403 Forbidden Error:**
+- **Cause**: Missing or invalid Personal Access Token
+- **Solution**: 
+  1. Create a token at [GitHub Settings → Personal access tokens](https://github.com/settings/tokens)
+  2. Select `gist` permission (and `repo` if using private repos)
+  3. Copy the token and paste it in the app
+  4. Use "Verbindung testen" to verify it works
+
+**404 Not Found Error:**
+- **Cause**: Invalid Gist ID
+- **Solution**: Check the Gist URL - the ID is the long string after `/gist/`
+
+**Connection Test:**
+- Use the "Verbindung testen" button to verify your setup before saving
+- This tests both read and write permissions to your Gist
 
 ## 🛠️ Technical Details
 
