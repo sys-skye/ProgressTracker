@@ -268,7 +268,6 @@ async function saveProgress(progress) {
 }
 
 // Firebase sync functionality
-let userId = null;
 let isOnline = navigator.onLine;
 
 // Update sync status display
