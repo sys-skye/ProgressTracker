@@ -447,9 +447,27 @@ footer {
     justify-content: center;
 }
 
-.sync-actions .sync-btn {
-    flex: 1;
-    max-width: 150px;
+.sync-status-indicator {
+    background: var(--bg-gradient);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    margin-bottom: 15px;
+    border: 1px solid var(--border-light);
+}
+
+.sync-status-indicator.configured {
+    background: linear-gradient(135deg, var(--success-light), rgba(16, 185, 129, 0.1));
+    border-color: var(--success-color);
+}
+
+.sync-status-indicator span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.sync-status-indicator.configured span {
+    color: var(--success-color);
 }
 
 .reset-btn {

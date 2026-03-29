@@ -80,12 +80,14 @@ Synchronisiere deinen Fortschritt kostenlos über mehrere Geräte mit GitHub Gis
    - Gib die Gist-ID ein (die lange Zahlenfolge in der URL)
    - Gib deinen Personal Access Token ein (falls privater Gist)
    - Klicke "Einstellungen speichern"
+   - **Zugangsdaten werden automatisch gespeichert und bleiben über Sessions erhalten**
 
-4. **Synchronisation**:
-   - Fortschritt wird automatisch beim Ändern gespeichert
-   - Beim ersten Öffnen auf einem neuen Gerät wird der Fortschritt aus der Cloud geladen
-   - Status-Meldungen zeigen Sync-Erfolg/-Fehler an
-   - **Manuelle Sync**: Verwende "Von Cloud laden" und "Zu Cloud speichern" Buttons für manuelle Steuerung
+4. **Automatische Synchronisation**:
+   - **Auto-Login**: Zugangsdaten werden bei jedem Besuch automatisch geladen
+   - **Auto-Sync**: Fortschritt wird bei jedem App-Start aus der Cloud geladen
+   - **Echtzeit-Sync**: Änderungen werden sofort in die Cloud gespeichert
+   - **Status-Anzeige**: Zeigt ob Sync konfiguriert und funktionsfähig ist
+   - **Manuelle Steuerung**: "Von Cloud laden" und "Zu Cloud speichern" für manuelle Sync
 
 ### Vorteile:
 - ✅ Kostenlos (GitHub Account erforderlich)
@@ -122,12 +124,14 @@ Sync your progress across devices for free using GitHub Gist:
    - Enter the Gist ID (the long number sequence in the URL)
    - Enter your Personal Access Token (if using private gist)
    - Click "Einstellungen speichern" (Save Settings)
+   - **Credentials are automatically saved and will persist across sessions**
 
-4. **Synchronization**:
-   - Progress is automatically saved when changed
-   - When opening on a new device, progress loads from cloud
-   - Status messages show sync success/failure
-   - **Manual sync**: Use "Von Cloud laden" (Load from Cloud) and "Zu Cloud speichern" (Save to Cloud) buttons for manual control
+4. **Automatic Synchronization**:
+   - **Auto-login**: Credentials are loaded automatically on every visit
+   - **Auto-sync**: Progress loads from cloud on every app start
+   - **Real-time sync**: Changes are saved to cloud immediately
+   - **Status indicator**: Shows if sync is configured and working
+   - **Manual controls**: "Von Cloud laden" and "Zu Cloud speichern" for manual sync
 
 ### Benefits:
 - ✅ Free (GitHub account required)

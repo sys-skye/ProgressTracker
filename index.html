@@ -35,6 +35,9 @@
 
             <div class="sync-settings">
                 <h3>Cloud-Sync (kostenlos mit GitHub)</h3>
+                <div id="syncStatusIndicator" class="sync-status-indicator" style="display: none;">
+                    <span id="syncStatusText">Status: Nicht konfiguriert</span>
+                </div>
                 <div class="sync-inputs">
                     <input type="text" id="gistId" placeholder="GitHub Gist ID" style="margin-right: 10px; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color);">
                     <input type="password" id="gistToken" placeholder="Personal Access Token (optional)" style="margin-right: 10px; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color);">
