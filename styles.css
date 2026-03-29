@@ -441,6 +441,17 @@ footer {
     transform: translateY(-1px);
 }
 
+.sync-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.sync-actions .sync-btn {
+    flex: 1;
+    max-width: 150px;
+}
+
 .reset-btn {
     margin-top: 16px;
     padding: 12px 24px;
@@ -580,6 +591,14 @@ footer {
 
     .sync-btn {
         width: 100%;
+    }
+
+    .sync-actions {
+        flex-direction: column;
+    }
+
+    .sync-actions .sync-btn {
+        max-width: none;
     }
 }
 

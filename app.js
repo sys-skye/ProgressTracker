@@ -369,21 +369,52 @@ function initializeProgress() {
 // Get current progress (from localStorage or Gist)
 async function getCurrentProgress() {
     let progress = loadProgress();
+    let useGistData = false;
 
-    // If no local progress, try loading from Gist
-    if (Object.keys(progress).length === 0) {
+    // If gist is configured, try to load from Gist and compare
+    if (gistConfig.gistId) {
         const gistProgress = await loadFromGist();
         if (gistProgress && Object.keys(gistProgress).length > 0) {
-            progress = gistProgress;
-            // Save to localStorage for faster access
-            localStorage.setItem('learningProgress', JSON.stringify(progress));
-            updateSyncStatus('Loaded from cloud ✓');
-        } else {
-            progress = initializeProgress();
+            // Count completed tasks in both
+            const localCompleted = countCompletedTasks(progress);
+            const gistCompleted = countCompletedTasks(gistProgress);
+
+            // Use gist data if:
+            // 1. Local storage is empty/initialized, or
+            // 2. Gist has more completed tasks (likely more recent)
+            if (Object.keys(progress).length === 0 ||
+                (localCompleted === 0 && gistCompleted > 0) ||
+                gistCompleted > localCompleted) {
+                progress = gistProgress;
+                useGistData = true;
+                // Save to localStorage for faster access
+                localStorage.setItem('learningProgress', JSON.stringify(progress));
+                updateSyncStatus('Loaded from cloud ✓');
+            }
         }
-        saveProgress(progress);
     }
+
+    // If still no progress, initialize
+    if (Object.keys(progress).length === 0) {
+        progress = initializeProgress();
+        saveProgress(progress);
+    } else if (!useGistData) {
+        // If we used local data and gist exists, sync local to gist
+        syncToGist(progress);
+    }
+
     return progress;
+}
+
+// Helper function to count completed tasks
+function countCompletedTasks(progress) {
+    let count = 0;
+    Object.keys(progress).forEach(dayKey => {
+        Object.keys(progress[dayKey]).forEach(taskKey => {
+            if (progress[dayKey][taskKey]) count++;
+        });
+    });
+    return count;
 }
 
 // Calculate overall progress
@@ -592,6 +623,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             updateSyncStatus('Bitte Gist ID eingeben');
         }
+    });
+
+    // Manual sync buttons
+    document.getElementById('syncFromCloud').addEventListener('click', async () => {
+        if (!gistConfig.gistId) {
+            updateSyncStatus('Gist nicht konfiguriert');
+            return;
+        }
+
+        updateSyncStatus('Lade von Cloud...');
+        const gistProgress = await loadFromGist();
+        if (gistProgress && Object.keys(gistProgress).length > 0) {
+            // Save to localStorage
+            localStorage.setItem('learningProgress', JSON.stringify(gistProgress));
+            updateSyncStatus('Von Cloud geladen ✓');
+
+            // Re-render the UI with new data
+            await renderDays(document.querySelector('.phase-btn.active').dataset.phase);
+            updateProgressDisplay();
+        } else {
+            updateSyncStatus('Keine Daten in Cloud gefunden');
+        }
+    });
+
+    document.getElementById('syncToCloud').addEventListener('click', async () => {
+        if (!gistConfig.gistId) {
+            updateSyncStatus('Gist nicht konfiguriert');
+            return;
+        }
+
+        updateSyncStatus('Speichere zu Cloud...');
+        const progress = await getCurrentProgress();
+        await syncToGist(progress);
     });
 
     // Load saved sync settings

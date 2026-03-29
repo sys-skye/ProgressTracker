@@ -85,6 +85,7 @@ Synchronisiere deinen Fortschritt kostenlos über mehrere Geräte mit GitHub Gis
    - Fortschritt wird automatisch beim Ändern gespeichert
    - Beim ersten Öffnen auf einem neuen Gerät wird der Fortschritt aus der Cloud geladen
    - Status-Meldungen zeigen Sync-Erfolg/-Fehler an
+   - **Manuelle Sync**: Verwende "Von Cloud laden" und "Zu Cloud speichern" Buttons für manuelle Steuerung
 
 ### Vorteile:
 - ✅ Kostenlos (GitHub Account erforderlich)
@@ -126,6 +127,7 @@ Sync your progress across devices for free using GitHub Gist:
    - Progress is automatically saved when changed
    - When opening on a new device, progress loads from cloud
    - Status messages show sync success/failure
+   - **Manual sync**: Use "Von Cloud laden" (Load from Cloud) and "Zu Cloud speichern" (Save to Cloud) buttons for manual control
 
 ### Benefits:
 - ✅ Free (GitHub account required)
