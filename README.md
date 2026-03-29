@@ -57,13 +57,87 @@ Click the filter buttons at the top to view:
 - Click "Reset Progress" at the bottom of the page
 - Confirm the action to clear all data
 
-## 💾 Data Storage
+## ☁️ Cloud Sync (kostenlos)
 
-Your progress is stored locally in your browser (localStorage):
-- ✅ No server required
-- ✅ Privacy-friendly
-- ✅ Works offline
-- ⚠️ Cleared when browser cache is cleared
+Synchronisiere deinen Fortschritt kostenlos über mehrere Geräte mit GitHub Gist:
+
+### Setup-Anleitung:
+
+1. **Erstelle einen GitHub Gist**:
+   - Gehe zu [gist.github.com](https://gist.github.com)
+   - Erstelle einen neuen Gist mit dem Dateinamen `progress.json`
+   - Füge als Inhalt ein leeres JSON-Objekt hinzu: `{}`
+   - **Wichtig**: Für Privatsphäre erstelle einen privaten Gist
+
+2. **Erstelle einen Personal Access Token** (nur für private Gists):
+   - Gehe zu [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+   - Erstelle einen neuen Token mit `gist` Berechtigung
+   - **Wichtig**: Speichere den Token sicher - er wird nur einmal angezeigt!
+
+3. **Konfiguriere die Sync in der App**:
+   - Öffne die App in deinem Browser
+   - Scrolle zum Footer-Bereich "Cloud-Sync"
+   - Gib die Gist-ID ein (die lange Zahlenfolge in der URL)
+   - Gib deinen Personal Access Token ein (falls privater Gist)
+   - Klicke "Einstellungen speichern"
+
+4. **Synchronisation**:
+   - Fortschritt wird automatisch beim Ändern gespeichert
+   - Beim ersten Öffnen auf einem neuen Gerät wird der Fortschritt aus der Cloud geladen
+   - Status-Meldungen zeigen Sync-Erfolg/-Fehler an
+
+### Vorteile:
+- ✅ Kostenlos (GitHub Account erforderlich)
+- ✅ Funktioniert auf allen Geräten
+- ✅ Automatische Synchronisation
+- ✅ Datenschutz (private Gists)
+- ✅ Offline-fähig (sync bei Verbindung)
+
+### Sicherheit:
+- Private Gists sind nur für dich sichtbar
+- Token wird lokal im Browser gespeichert
+- Niemals den Token mit anderen teilen
+
+## ☁️ Cloud Sync (Free)
+
+Sync your progress across devices for free using GitHub Gist:
+
+### Setup Instructions:
+
+1. **Create a GitHub Gist**:
+   - Go to [gist.github.com](https://gist.github.com)
+   - Create a new gist with filename `progress.json`
+   - Add an empty JSON object as content: `{}`
+   - **Important**: Create a private gist for privacy
+
+2. **Create a Personal Access Token** (private gists only):
+   - Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+   - Create a new token with `gist` permission
+   - **Important**: Save the token securely - it's shown only once!
+
+3. **Configure Sync in the App**:
+   - Open the app in your browser
+   - Scroll to the footer "Cloud-Sync" section
+   - Enter the Gist ID (the long number sequence in the URL)
+   - Enter your Personal Access Token (if using private gist)
+   - Click "Einstellungen speichern" (Save Settings)
+
+4. **Synchronization**:
+   - Progress is automatically saved when changed
+   - When opening on a new device, progress loads from cloud
+   - Status messages show sync success/failure
+
+### Benefits:
+- ✅ Free (GitHub account required)
+- ✅ Works on all devices
+- ✅ Automatic synchronization
+- ✅ Privacy (private gists)
+- ✅ Offline-capable (syncs when connected)
+
+### Security:
+- Private gists are visible only to you
+- Token stored locally in browser
+- Never share your token with others
 
 ## 🛠️ Technical Details
 

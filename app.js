@@ -253,18 +253,104 @@ function loadProgress() {
     return {};
 }
 
-// Save progress to localStorage
+// Save progress to localStorage and sync to Gist
 async function saveProgress(progress) {
     try {
         localStorage.setItem('learningProgress', JSON.stringify(progress));
         updateProgressDisplay();
+
+        // Sync to Gist in background
+        syncToGist(progress);
     } catch (e) {
         console.warn('Could not save progress to localStorage:', e);
         alert('Fortschritt konnte nicht gespeichert werden. Überprüfen Sie Ihre Browsereinstellungen.');
     }
 }
 
-// Firebase sync functionality
+// GitHub Gist sync functionality
+const GIST_CONFIG_KEY = 'gistConfig';
+let gistConfig = loadGistConfig();
+
+function loadGistConfig() {
+    try {
+        const saved = localStorage.getItem(GIST_CONFIG_KEY);
+        return saved ? JSON.parse(saved) : { gistId: '', token: '' };
+    } catch (e) {
+        console.warn('Could not load Gist config:', e);
+        return { gistId: '', token: '' };
+    }
+}
+
+function saveGistConfig(config) {
+    try {
+        localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(config));
+        gistConfig = config;
+    } catch (e) {
+        console.warn('Could not save Gist config:', e);
+    }
+}
+
+async function syncToGist(progress) {
+    if (!gistConfig.gistId) return;
+
+    try {
+        const response = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': gistConfig.token ? `token ${gistConfig.token}` : undefined,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                files: {
+                    'progress.json': {
+                        content: JSON.stringify(progress, null, 2)
+                    }
+                }
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status}`);
+        }
+
+        console.log('Progress synced to Gist successfully');
+        updateSyncStatus('Synced to cloud ✓');
+    } catch (e) {
+        console.warn('Could not sync to Gist:', e);
+        updateSyncStatus('Sync failed ✗');
+    }
+}
+
+async function loadFromGist() {
+    if (!gistConfig.gistId) return null;
+
+    try {
+        const response = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`);
+        if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status}`);
+        }
+
+        const gist = await response.json();
+        const progressData = gist.files['progress.json']?.content;
+        if (progressData) {
+            return JSON.parse(progressData);
+        }
+    } catch (e) {
+        console.warn('Could not load from Gist:', e);
+    }
+    return null;
+}
+
+function updateSyncStatus(message) {
+    const statusElement = document.getElementById('syncStatus');
+    if (statusElement) {
+        statusElement.textContent = message;
+        statusElement.style.display = 'block';
+        setTimeout(() => {
+            statusElement.style.display = 'none';
+        }, 3000);
+    }
+}
 
 // Initialize progress object
 function initializeProgress() {
@@ -280,12 +366,21 @@ function initializeProgress() {
     return progress;
 }
 
-// Get current progress
+// Get current progress (from localStorage or Gist)
 async function getCurrentProgress() {
     let progress = loadProgress();
 
+    // If no local progress, try loading from Gist
     if (Object.keys(progress).length === 0) {
-        progress = initializeProgress();
+        const gistProgress = await loadFromGist();
+        if (gistProgress && Object.keys(gistProgress).length > 0) {
+            progress = gistProgress;
+            // Save to localStorage for faster access
+            localStorage.setItem('learningProgress', JSON.stringify(progress));
+            updateSyncStatus('Loaded from cloud ✓');
+        } else {
+            progress = initializeProgress();
+        }
         saveProgress(progress);
     }
     return progress;
@@ -480,6 +575,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Reset button
     document.getElementById('resetProgress').addEventListener('click', resetProgress);
+
+    // Sync settings
+    document.getElementById('saveSyncSettings').addEventListener('click', () => {
+        const gistId = document.getElementById('gistId').value.trim();
+        const token = document.getElementById('gistToken').value.trim();
+
+        if (gistId) {
+            saveGistConfig({ gistId, token });
+            updateSyncStatus('Einstellungen gespeichert ✓');
+
+            // Try to sync current progress
+            getCurrentProgress().then(progress => {
+                syncToGist(progress);
+            });
+        } else {
+            updateSyncStatus('Bitte Gist ID eingeben');
+        }
+    });
+
+    // Load saved sync settings
+    document.getElementById('gistId').value = gistConfig.gistId;
+    document.getElementById('gistToken').value = gistConfig.token;
 });
 
 window.addEventListener('offline', () => {
