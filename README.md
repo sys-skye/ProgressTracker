@@ -85,7 +85,7 @@ Synchronisiere deinen Fortschritt kostenlos über mehrere Geräte mit GitHub Gis
 4. **Automatische Synchronisation**:
    - **Auto-Login**: Zugangsdaten werden bei jedem Besuch automatisch geladen
    - **Auto-Sync**: Fortschritt wird bei jedem App-Start aus der Cloud geladen
-   - **Echtzeit-Sync**: Änderungen werden sofort in die Cloud gespeichert
+   - **Echtzeit-Sync**: Änderungen werden sofort in die Cloud gespeichert wenn Tasks gecheckt/ungecheckt werden
    - **Status-Anzeige**: Zeigt ob Sync konfiguriert und funktionsfähig ist
    - **Manuelle Steuerung**: "Von Cloud laden" und "Zu Cloud speichern" für manuelle Sync
 
@@ -129,7 +129,7 @@ Sync your progress across devices for free using GitHub Gist:
 4. **Automatic Synchronization**:
    - **Auto-login**: Credentials are loaded automatically on every visit
    - **Auto-sync**: Progress loads from cloud on every app start
-   - **Real-time sync**: Changes are saved to cloud immediately
+   - **Real-time sync**: Changes are saved to cloud immediately when tasks are checked/unchecked
    - **Status indicator**: Shows if sync is configured and working
    - **Manual controls**: "Von Cloud laden" and "Zu Cloud speichern" for manual sync
 

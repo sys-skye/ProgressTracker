@@ -259,8 +259,11 @@ async function saveProgress(progress) {
         localStorage.setItem('learningProgress', JSON.stringify(progress));
         updateProgressDisplay();
 
-        // Sync to Gist in background
-        syncToGist(progress);
+        // Sync to Gist in background with status feedback
+        if (gistConfig.gistId) {
+            updateSyncStatus('Synchronisiere...');
+            await syncToGist(progress);
+        }
     } catch (e) {
         console.warn('Could not save progress to localStorage:', e);
         alert('Fortschritt konnte nicht gespeichert werden. Überprüfen Sie Ihre Browsereinstellungen.');
@@ -314,10 +317,10 @@ async function syncToGist(progress) {
         }
 
         console.log('Progress synced to Gist successfully');
-        updateSyncStatus('Synced to cloud ✓');
+        updateSyncStatus('Synchronisiert ✓');
     } catch (e) {
         console.warn('Could not sync to Gist:', e);
-        updateSyncStatus('Sync failed ✗');
+        updateSyncStatus('Sync fehlgeschlagen ✗');
     }
 }
 
@@ -568,9 +571,12 @@ function getDayProgress(dayNumber, progress) {
 
 // Toggle task completion
 async function toggleTask(dayNumber, taskIndex, checkbox) {
+    // Show immediate feedback
+    updateSyncStatus('Speichere...');
+
     const progress = await getCurrentProgress();
     progress[`day${dayNumber}`][`task${taskIndex}`] = checkbox.checked;
-    saveProgress(progress);
+    await saveProgress(progress);
 
     const dayCard = document.getElementById(`day${dayNumber}`);
     const dayProgress = getDayProgress(dayNumber, progress);
