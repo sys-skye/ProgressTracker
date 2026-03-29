@@ -253,12 +253,17 @@ function loadProgress() {
     return {};
 }
 
-// Save progress to localStorage only
+// Save progress to localStorage and (optionally) push to cloud
 async function saveProgress(progress) {
     try {
         localStorage.setItem('learningProgress', JSON.stringify(progress));
         updateProgressDisplay();
         updateSyncStatus('Gespeichert ✓');
+
+        // Push to cloud if enabled and this change is local
+        if (typeof cloudEnabled !== 'undefined' && cloudEnabled && !applyingRemote) {
+            writeStateDebounced(progress);
+        }
     } catch (e) {
         console.warn('Could not save progress to localStorage:', e);
         alert('Fortschritt konnte nicht gespeichert werden. Überprüfen Sie Ihre Browsereinstellungen.');
@@ -273,6 +278,82 @@ function updateSyncStatus(message) {
         setTimeout(() => {
             statusElement.style.display = 'none';
         }, 3000);
+    }
+}
+
+// --- Cloud sync helpers (optional) ---
+let cloudEnabled = false;
+let clientId = null;
+let applyingRemote = false;
+let stateRef = null;
+let lastRemoteAt = 0;
+
+function debounce(fn, wait = 200) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+
+const writeStateDebounced = debounce(async (state) => {
+    try {
+        if (!cloudEnabled || !stateRef || applyingRemote) return;
+        await stateRef.set({ data: state, origin: clientId, updatedAt: Date.now() });
+    } catch (e) {
+        console.warn('Cloud write failed:', e);
+    }
+}, 250);
+
+function applyRemoteState(payload) {
+    if (!payload || !payload.data) return;
+    // ignore updates originated from this client
+    if (payload.origin && clientId && payload.origin === clientId) return;
+    // ignore older updates
+    if (payload.updatedAt && payload.updatedAt <= lastRemoteAt) return;
+
+    applyingRemote = true;
+    lastRemoteAt = payload.updatedAt || Date.now();
+    try {
+        localStorage.setItem('learningProgress', JSON.stringify(payload.data));
+        updateSyncStatus('Sync: empfangen ✓');
+        renderDays(document.querySelector('.phase-btn.active').dataset.phase);
+        updateProgressDisplay();
+    } catch (e) {
+        console.warn('Failed to apply remote state:', e);
+    }
+    applyingRemote = false;
+}
+
+function setupCloudSync() {
+    // Cloud sync is enabled only if the page provided window.FIREBASE_CONFIG
+    const cfg = window.FIREBASE_CONFIG;
+    if (!cfg || !cfg.databaseURL) {
+        console.info('Firebase config not found - cloud sync disabled. Paste config into index.html to enable.');
+        updateSyncStatus('Cloud sync deaktiviert (Config fehlt)');
+        cloudEnabled = false;
+        return;
+    }
+
+    try {
+        firebase.initializeApp(cfg);
+        const db = firebase.database();
+        stateRef = db.ref('shared/state');
+        cloudEnabled = true;
+
+        firebase.auth().signInAnonymously().catch(err => console.warn('Auth failed:', err));
+        firebase.auth().onAuthStateChanged(user => {
+            clientId = user ? user.uid : null;
+        });
+
+        stateRef.on('value', snap => {
+            const payload = snap.val();
+            if (!payload) return;
+            applyRemoteState(payload);
+        });
+
+        updateSyncStatus('Cloud sync aktiviert');
+    } catch (e) {
+        console.warn('Could not initialize Firebase:', e);
+        cloudEnabled = false;
+        updateSyncStatus('Cloud sync Fehler');
     }
 }
 
@@ -483,6 +564,13 @@ async function resetProgress() {
 document.addEventListener('DOMContentLoaded', async () => {
     // Initial render
     await renderDays('all');
+
+    // Try to initialize cloud sync (will be disabled if no config pasted)
+    try {
+        setupCloudSync();
+    } catch (e) {
+        console.warn('Cloud sync setup error:', e);
+    }
 
     // Phase filter buttons
     document.querySelectorAll('.phase-btn').forEach(btn => {
