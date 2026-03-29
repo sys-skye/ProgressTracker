@@ -6,7 +6,6 @@ An interactive web tracker for your 15-day intensive learning plan in Economic P
 
 - **Interactive Progress Tracker**: Mark tasks as completed and track your learning progress
 - **Automatic Storage**: Your progress is saved locally in the browser
-- **🌐 Cross-Device Sync**: Synchronize your progress automatically across ALL devices using GitHub
 - **Responsive Design**: Perfect for desktop and mobile
 - **Two Phases**:
   - Phase 1 (Day 1-10): Content Acquisition
@@ -20,19 +19,12 @@ An interactive web tracker for your 15-day intensive learning plan in Economic P
 
 1. **Create Repository**:
    - Repository name: `progress-tracker`
-   - Make it **Private** for personal data privacy
-
-2. **Upload Files**:
    - Upload all files to your GitHub repository
-   - Files: `index.html`, `styles.css`, `app.js`, `README.md`, `DEPLOYMENT.md`
 
-3. **Enable GitHub Pages**:
+2. **Enable GitHub Pages**:
    - Go to Repository → Settings → Pages
-   - Under "Source" select: `main` branch and `/(root)` folder
-   - Click "Save"
-
-4. **Your site is live!**
-   - Your website will be at: `https://sys-skye.github.io/progress-tracker/`
+   - Select `main` branch and `/(root)` folder
+   - Your website will be live
 
 ### Local Usage
 
@@ -43,17 +35,6 @@ open index.html  # macOS
 start index.html  # Windows
 xdg-open index.html  # Linux
 ```
-
-## 🔑 GitHub Sync Setup
-
-For cross-device synchronization:
-
-1. **Create a Personal Access Token** at [GitHub Settings → Tokens](https://github.com/settings/tokens)
-2. **Give it `repo` permissions**
-3. **Update the token** in `index.html` config
-4. **Deploy to GitHub Pages**
-
-Your progress will now sync automatically across all your devices!
 
 ## 🎯 How It Works
 
@@ -78,16 +59,17 @@ Click the filter buttons at the top to view:
 
 ## 💾 Data Storage
 
-Your progress is stored in two places:
-- **Local**: Browser localStorage (works offline, instant)
-- **GitHub**: JSON file in your repository (cross-device sync)
+Your progress is stored locally in your browser (localStorage):
+- ✅ No server required
+- ✅ Privacy-friendly
+- ✅ Works offline
+- ⚠️ Cleared when browser cache is cleared
 
 ## 🛠️ Technical Details
 
 - **HTML5**: Semantic markup
 - **CSS3**: Modern styling with CSS Variables, Flexbox, Grid
 - **Vanilla JavaScript**: No frameworks required
-- **GitHub API**: For cross-device synchronization
 - **Responsive Design**: Mobile-first approach
 - **Accessibility**: Accessible checkboxes and navigation
 

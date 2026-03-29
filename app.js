@@ -253,14 +253,11 @@ function loadProgress() {
     return {};
 }
 
-// Save progress to localStorage and GitHub
+// Save progress to localStorage
 async function saveProgress(progress) {
     try {
         localStorage.setItem('learningProgress', JSON.stringify(progress));
         updateProgressDisplay();
-
-        // Sync to GitHub
-        await saveToGitHub(progress);
     } catch (e) {
         console.warn('Could not save progress to localStorage:', e);
         alert('Fortschritt konnte nicht gespeichert werden. Überprüfen Sie Ihre Browsereinstellungen.');
@@ -268,196 +265,6 @@ async function saveProgress(progress) {
 }
 
 // Firebase sync functionality
-let isOnline = navigator.onLine;
-
-// Update sync status display
-function updateSyncStatus(status, message = '') {
-    const syncElement = document.getElementById('syncStatus');
-    if (!syncElement) return;
-
-    const icons = {
-        'syncing': '🔄',
-        'synced': '✅',
-        'offline': '📴',
-        'error': '❌'
-    };
-
-    const messages = {
-        'syncing': 'Synchronisiere...',
-        'synced': 'Synchronisiert',
-        'offline': 'Offline-Modus',
-        'error': 'Sync-Fehler'
-    };
-
-    syncElement.innerHTML = `${icons[status]} ${messages[status]}${message ? ': ' + message : ''}`;
-}
-
-// Initialize Firebase auth
-async function initializeFirebase() {
-    try {
-        if (!window.firebaseApp) {
-            updateSyncStatus('offline', 'Firebase nicht verfügbar');
-            return false;
-        }
-
-        updateSyncStatus('syncing', 'Verbinde...');
-        const { auth, signInAnonymously } = window.firebaseApp;
-        const result = await signInAnonymously(auth);
-        userId = result.user.uid;
-        updateSyncStatus('synced', 'Verbunden');
-        console.log('Firebase initialized, user ID:', userId);
-        return true;
-    } catch (error) {
-        updateSyncStatus('error', 'Verbindung fehlgeschlagen');
-        console.warn('Firebase initialization failed:', error);
-        return false;
-    }
-}
-
-// GitHub-based sync functionality
-let userId = null;
-
-// Initialize GitHub sync
-async function initializeGitHub() {
-    try {
-        if (!window.githubConfig || !window.githubConfig.token || window.githubConfig.token === 'YOUR_PERSONAL_ACCESS_TOKEN') {
-            updateSyncStatus('offline', 'GitHub nicht konfiguriert');
-            return false;
-        }
-
-        updateSyncStatus('synced', 'GitHub bereit');
-        console.log('GitHub sync initialized');
-        return true;
-    } catch (error) {
-        updateSyncStatus('error', 'GitHub-Init fehlgeschlagen');
-        console.warn('GitHub initialization failed:', error);
-        return false;
-    }
-}
-
-// GitHub API helper functions
-async function githubRequest(endpoint, options = {}) {
-    const { username, repo, token } = window.githubConfig;
-    const url = `https://api.github.com/repos/${username}/${repo}/${endpoint}`;
-
-    const defaultOptions = {
-        headers: {
-            'Authorization': `token ${token}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-        },
-    };
-
-    return fetch(url, { ...defaultOptions, ...options });
-}
-
-// Load progress from GitHub
-async function loadFromGitHub() {
-    if (!window.githubConfig) return null;
-
-    try {
-        updateSyncStatus('syncing', 'Lade von GitHub...');
-        const response = await githubRequest(`contents/${window.githubConfig.dataFile}`);
-
-        if (response.status === 404) {
-            // File doesn't exist yet, create it
-            await saveToGitHub({});
-            return {};
-        }
-
-        if (!response.ok) throw new Error(`GitHub API error: ${response.status}`);
-
-        const data = await response.json();
-        const progress = JSON.parse(atob(data.content));
-
-        updateSyncStatus('synced', 'Geladen von GitHub');
-
-        // Merge with local data
-        const localProgress = loadProgress();
-        const mergedProgress = mergeProgressData(localProgress, progress);
-
-        if (JSON.stringify(mergedProgress) !== JSON.stringify(localProgress)) {
-            localStorage.setItem('learningProgress', JSON.stringify(mergedProgress));
-            console.log('Progress loaded from GitHub and merged');
-            return mergedProgress;
-        }
-
-        return progress;
-    } catch (error) {
-        updateSyncStatus('error', 'Laden fehlgeschlagen');
-        console.warn('GitHub load failed:', error);
-        return null;
-    }
-}
-
-// Save progress to GitHub
-async function saveToGitHub(progress) {
-    if (!window.githubConfig) return;
-
-    try {
-        updateSyncStatus('syncing', 'Speichere zu GitHub...');
-
-        // First, try to get the current file to get its SHA
-        let sha = null;
-        try {
-            const getResponse = await githubRequest(`contents/${window.githubConfig.dataFile}`);
-            if (getResponse.ok) {
-                const fileData = await getResponse.json();
-                sha = fileData.sha;
-            }
-        } catch (e) {
-            // File doesn't exist, sha will be null
-        }
-
-        // Encode and save
-        const content = btoa(JSON.stringify(progress, null, 2));
-        const body = {
-            message: `Update learning progress`,
-            content: content,
-            branch: 'main' // or 'master' depending on your default branch
-        };
-
-        if (sha) {
-            body.sha = sha;
-        }
-
-        const response = await githubRequest(`contents/${window.githubConfig.dataFile}`, {
-            method: 'PUT',
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`GitHub API error: ${errorData.message}`);
-        }
-
-        updateSyncStatus('synced', 'Gespeichert zu GitHub');
-        console.log('Progress saved to GitHub');
-    } catch (error) {
-        updateSyncStatus('error', 'Speichern fehlgeschlagen');
-        console.warn('GitHub save failed:', error);
-    }
-}
-
-// Merge progress data (simple merge - Firebase wins conflicts)
-function mergeProgressData(local, firebase) {
-    const merged = { ...local };
-
-    Object.keys(firebase).forEach(dayKey => {
-        if (!merged[dayKey]) {
-            merged[dayKey] = firebase[dayKey];
-        } else {
-            // For each task, Firebase wins if it exists
-            Object.keys(firebase[dayKey]).forEach(taskKey => {
-                if (firebase[dayKey][taskKey] !== undefined) {
-                    merged[dayKey][taskKey] = firebase[dayKey][taskKey];
-                }
-            });
-        }
-    });
-
-    return merged;
-}
 
 // Initialize progress object
 function initializeProgress() {
@@ -476,12 +283,6 @@ function initializeProgress() {
 // Get current progress
 async function getCurrentProgress() {
     let progress = loadProgress();
-
-    // Try to load from GitHub and merge
-    const githubProgress = await loadFromGitHub();
-    if (githubProgress) {
-        progress = githubProgress;
-    }
 
     if (Object.keys(progress).length === 0) {
         progress = initializeProgress();
@@ -647,14 +448,6 @@ async function toggleTask(dayNumber, taskIndex, checkbox) {
 async function resetProgress() {
     if (confirm('Möchtest du wirklich deinen gesamten Fortschritt zurücksetzen? Dies kann nicht rückgängig gemacht werden.')) {
         localStorage.removeItem('learningProgress');
-        // Also clear from GitHub if available
-        if (window.githubConfig) {
-            try {
-                await saveToGitHub({});
-            } catch (error) {
-                console.warn('GitHub reset failed:', error);
-            }
-        }
         await renderDays(document.querySelector('.phase-btn.active').dataset.phase);
         updateProgressDisplay();
     }
@@ -662,9 +455,6 @@ async function resetProgress() {
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize GitHub sync
-    await initializeGitHub();
-
     // Initial render
     await renderDays('all');
 
@@ -690,13 +480,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Reset button
     document.getElementById('resetProgress').addEventListener('click', resetProgress);
-});
-
-// Monitor online/offline status
-window.addEventListener('online', () => {
-    updateSyncStatus('syncing', 'Online - Synchronisiere...');
-    // Try to sync current progress
-    getCurrentProgress().then(progress => saveToGitHub(progress));
 });
 
 window.addEventListener('offline', () => {

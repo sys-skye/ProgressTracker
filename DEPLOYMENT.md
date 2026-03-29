@@ -1,90 +1,17 @@
-# GitHub Sync Setup for Cross-Device Sync
-
-## Why GitHub Sync?
-
-Your progress tracker now supports **cross-device synchronization** using your own GitHub repository! This means your progress syncs seamlessly between devices without needing external services.
-
-## How It Works
-
-- **Shared Progress**: Same progress across ALL your devices (phone, tablet, computer)
-- **Data Storage**: Progress is saved as a JSON file (`progress-data.json`) in your GitHub repo
-- **Version Control**: Every save creates a commit in your repository
-- **Privacy**: Data stays in your GitHub repo, under your control
-
-## Quick GitHub Sync Setup (10 minutes)
-
-### 1. Create GitHub Repository
-
-1. Go to [GitHub.com](https://github.com) and sign in
-2. Click the **"+"** in the top right → **"New repository"**
-3. Repository name: `progress-tracker`
-4. Make it **Private** (recommended for personal data)
-5. **DO NOT** initialize with README, .gitignore, or license
-6. Click **"Create repository"**
-
-### 2. Create a Personal Access Token
-
-1. Go to [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens)
-2. Click **"Generate new token (classic)"**
-3. Give it a name: `Progress Tracker Sync`
-4. Select scopes:
-   - ✅ `repo` (Full control of private repositories)
-5. Click **"Generate token"**
-6. **⚠️ COPY THE TOKEN IMMEDIATELY** - You won't see it again!
-
-### 3. Configure Your App
-
-The config is already set up for your repo! Just replace the token in `index.html`:
-
-```javascript
-window.githubConfig = {
-    username: 'sys-skye',                    // ← Already set
-    repo: 'progress-tracker',                // ← Already set
-    token: 'ghp_xxxxxxxxxxxxxxxxxxxx',       // ← PASTE YOUR TOKEN HERE
-    dataFile: 'progress-data.json'           // ← Keep as-is
-};
-```
-
-### 4. Deploy to GitHub Pages
-
-Follow the deployment steps below, then your sync will work automatically!
-
-## Security & Privacy
-
-- **Your data only** - Stored in your private GitHub repository
-- **No external services** - Everything stays under your control
-- **Version history** - See all your progress changes in Git commits
-- **Private by default** - Make your repo private for maximum privacy
-
-## Testing Sync
-
-1. Complete some tasks on your computer
-2. Open the app on your phone
-3. Progress should appear automatically!
-4. Changes sync instantly across devices
-
-## Troubleshooting
-
-- **Not syncing?** Check browser console for errors
-- **GitHub errors?** Make sure your token has `repo` permissions
-- **Still not working?** Try clearing browser cache and reloading
-
----
-
 # Deployment Guide - Progress Tracker
 
 ## Quick Deployment in 5 Steps
 
 ### 1. Repository Setup
 
-Your repository is already configured in the code:
-- Username: `sys-skye`
-- Repository: `progress-tracker`
+Create a new repository on GitHub:
+- Repository name: `progress-tracker`
+- Make it **Private** (recommended for personal data)
 
 ### 2. Upload Files to GitHub
 
 **Option A: GitHub Web Interface**
-1. Go to [github.com/sys-skye/progress-tracker](https://github.com/sys-skye/progress-tracker)
+1. Go to your repository
 2. Click **"Add file"** → **"Upload files"**
 3. Upload all files:
    - `index.html`
@@ -99,7 +26,7 @@ git init
 git add .
 git commit -m "Initial commit"
 git branch -M main
-git remote add origin https://github.com/sys-skye/progress-tracker.git
+git remote add origin https://github.com/YOUR-USERNAME/progress-tracker.git
 git push -u origin main
 ```
 
@@ -110,15 +37,22 @@ git push -u origin main
 3. Under **"Source"**, select **"Deploy from a branch"**
 4. Select **"main"** branch and **"/ (root)"** folder
 5. Click **"Save"**
-6. Your site will be live at: `https://sys-skye.github.io/progress-tracker/`
+6. Your site will be live at: `https://YOUR-USERNAME.github.io/progress-tracker/`
 
-### 4. Update Token
+### 4. Test Your App
 
-After creating your token (step 2 above), edit `index.html` and replace the placeholder token.
+Visit your GitHub Pages URL and test the functionality!
 
-### 5. Test Your App
+## 📱 Local Development
 
-Visit your GitHub Pages URL and test the sync functionality!
+For local testing, simply open `index.html` in your browser.
+
+## 💾 Data Storage
+
+Your progress is stored locally in your browser (localStorage):
+- Works offline
+- No external services required
+- Data stays on your device
 ```bash
 cd /Users/skye/Documents/Github\ pJ
 git init
