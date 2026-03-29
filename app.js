@@ -297,12 +297,12 @@ async function syncToGist(progress) {
     if (!gistConfig.gistId) return;
 
     try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (gistConfig.token) headers['Authorization'] = `token ${gistConfig.token}`;
+
         const response = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, {
             method: 'PATCH',
-            headers: {
-                'Authorization': gistConfig.token ? `token ${gistConfig.token}` : undefined,
-                'Content-Type': 'application/json',
-            },
+            headers,
             body: JSON.stringify({
                 files: {
                     'progress.json': {
@@ -345,7 +345,9 @@ async function testGistConnection() {
         updateSyncStatus('Teste Verbindung...');
 
         // First try to read the gist
-        const readResponse = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`);
+        const readHeaders = {};
+        if (gistConfig.token) readHeaders['Authorization'] = `token ${gistConfig.token}`;
+        const readResponse = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, { headers: readHeaders });
         if (!readResponse.ok) {
             if (readResponse.status === 404) {
                 updateSyncStatus('Gist nicht gefunden. Erstelle zuerst einen Gist!');
@@ -356,12 +358,12 @@ async function testGistConnection() {
 
         // Then try to write (PATCH) to test write permissions
         const testData = { test: true, timestamp: Date.now() };
+        const writeHeaders = { 'Content-Type': 'application/json' };
+        if (gistConfig.token) writeHeaders['Authorization'] = `token ${gistConfig.token}`;
+
         const writeResponse = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, {
             method: 'PATCH',
-            headers: {
-                'Authorization': gistConfig.token ? `token ${gistConfig.token}` : undefined,
-                'Content-Type': 'application/json',
-            },
+            headers: writeHeaders,
             body: JSON.stringify({
                 files: {
                     'test.json': {
@@ -383,12 +385,11 @@ async function testGistConnection() {
         }
 
         // Clean up test file
+        const cleanupHeaders = { 'Content-Type': 'application/json' };
+        if (gistConfig.token) cleanupHeaders['Authorization'] = `token ${gistConfig.token}`;
         await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, {
             method: 'PATCH',
-            headers: {
-                'Authorization': gistConfig.token ? `token ${gistConfig.token}` : undefined,
-                'Content-Type': 'application/json',
-            },
+            headers: cleanupHeaders,
             body: JSON.stringify({
                 files: {
                     'test.json': null // Delete the test file
@@ -409,7 +410,9 @@ async function loadFromGist() {
     if (!gistConfig.gistId) return null;
 
     try {
-        const response = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`);
+        const headers = {};
+        if (gistConfig.token) headers['Authorization'] = `token ${gistConfig.token}`;
+        const response = await fetch(`https://api.github.com/gists/${gistConfig.gistId}`, { headers });
         if (!response.ok) {
             throw new Error(`GitHub API error: ${response.status}`);
         }
@@ -706,12 +709,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Reset button
-    document.getElementById('resetProgress').addEventListener('click', resetProgress);
+    const resetBtn = document.getElementById('resetProgress');
+    if (resetBtn) resetBtn.addEventListener('click', resetProgress);
 
     // Sync settings
-    document.getElementById('saveSyncSettings').addEventListener('click', () => {
-        const gistId = document.getElementById('gistId').value.trim();
-        const token = document.getElementById('gistToken').value.trim();
+    const saveBtn = document.getElementById('saveSyncSettings');
+    if (saveBtn) saveBtn.addEventListener('click', () => {
+        const gistIdEl = document.getElementById('gistId');
+        const tokenEl = document.getElementById('gistToken');
+        const gistId = gistIdEl ? gistIdEl.value.trim() : '';
+        const token = tokenEl ? tokenEl.value.trim() : '';
 
         if (gistId) {
             saveGistConfig({ gistId, token });
@@ -728,9 +735,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Test connection
-    document.getElementById('testConnection').addEventListener('click', async () => {
-        const gistId = document.getElementById('gistId').value.trim();
-        const token = document.getElementById('gistToken').value.trim();
+    const testBtn = document.getElementById('testConnection');
+    if (testBtn) testBtn.addEventListener('click', async () => {
+        const gistIdEl = document.getElementById('gistId');
+        const tokenEl = document.getElementById('gistToken');
+        const gistId = gistIdEl ? gistIdEl.value.trim() : '';
+        const token = tokenEl ? tokenEl.value.trim() : '';
 
         if (gistId) {
             // Temporarily update config for testing
@@ -754,7 +764,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Manual sync buttons
-    document.getElementById('syncFromCloud').addEventListener('click', async () => {
+    const fromBtn = document.getElementById('syncFromCloud');
+    if (fromBtn) fromBtn.addEventListener('click', async () => {
         if (!gistConfig.gistId) {
             updateSyncStatus('Gist nicht konfiguriert');
             return;
@@ -768,14 +779,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateSyncStatus('Von Cloud geladen ✓');
 
             // Re-render the UI with new data
-            await renderDays(document.querySelector('.phase-btn.active').dataset.phase);
+            const activePhaseBtn = document.querySelector('.phase-btn.active');
+            const phase = activePhaseBtn ? activePhaseBtn.dataset.phase : 'all';
+            await renderDays(phase);
             updateProgressDisplay();
         } else {
             updateSyncStatus('Keine Daten in Cloud gefunden');
         }
     });
 
-    document.getElementById('syncToCloud').addEventListener('click', async () => {
+    const toBtn = document.getElementById('syncToCloud');
+    if (toBtn) toBtn.addEventListener('click', async () => {
         if (!gistConfig.gistId) {
             updateSyncStatus('Gist nicht konfiguriert');
             return;
@@ -793,5 +807,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.addEventListener('offline', () => {
-    updateSyncStatus('offline', 'Offline-Modus');
+    updateSyncStatus('Offline-Modus');
 });
